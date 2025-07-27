@@ -9,13 +9,14 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Support\Facades\Log; // Adiciona essa linha no topo (acima da classe)
 
 class SincronizarDespesasDeputado implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    protected $deputadoIdCamara; // id da API (id_camara)
-    protected $deputadoDbId;     // id da tabela 'deputados'
+    protected $deputadoIdCamara;
+    protected $deputadoDbId;
 
     public function __construct($deputadoIdCamara, $deputadoDbId)
     {
@@ -25,6 +26,8 @@ class SincronizarDespesasDeputado implements ShouldQueue
 
     public function handle()
     {
+        Log::info("▶️ Job iniciado para deputado ID: {$this->deputadoIdCamara}");
+
         $response = Http::get("https://dadosabertos.camara.leg.br/api/v2/deputados/{$this->deputadoIdCamara}/despesas", [
             'itens' => 100,
             'ordem' => 'DESC',
@@ -34,7 +37,11 @@ class SincronizarDespesasDeputado implements ShouldQueue
         if ($response->successful()) {
             $dados = $response->json()['dados'];
 
+            Log::info("📦 Total de despesas recebidas: " . count($dados));
+
             foreach ($dados as $item) {
+                Log::info("Salvando despesa de {$item['nomeFornecedor']} no mês {$item['mes']}/{$item['ano']}");
+
                 Despesa::updateOrCreate(
                     [
                         'deputado_id'     => $this->deputadoDbId,
@@ -49,6 +56,10 @@ class SincronizarDespesasDeputado implements ShouldQueue
                     ]
                 );
             }
+
+            Log::info("Job finalizado com sucesso para deputado ID: {$this->deputadoIdCamara}");
+        } else {
+            Log::error("Erro ao buscar despesas do deputado ID: {$this->deputadoIdCamara}");
         }
     }
 }

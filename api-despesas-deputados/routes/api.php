@@ -3,6 +3,8 @@ use App\Models\Deputado;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Jobs\SincronizarDespesasDeputado;
+use App\Jobs\SincronizarDeputadosJob;
+
 
 Route::get('/deputados', function(Request $request) {
     $query = Deputado::query();
@@ -33,4 +35,16 @@ Route::post('/deputados/{id}/sincronizar-despesas', function($id) {
     return response()->json([
         'message' => "Job de sincronização enviado para deputado: {$deputado->nome}"
     ]);
+});
+
+
+Route::post('/sincronizar-deputados', function () {
+    dispatch(new SincronizarDeputadosJob());
+    return response()->json(['message' => 'Job de sincronização dos deputados iniciado']);
+});
+
+Route::get('/deputados/{id}/despesas', function($id) {
+    $deputado = Deputado::findOrFail($id);
+    $despesas = $deputado->despesas()->paginate(10);
+    return response()->json($despesas);
 });
