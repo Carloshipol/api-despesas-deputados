@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import api from '../services/api'
 
 const deputados = ref([])
@@ -8,6 +8,7 @@ const totalPaginas = ref(1)
 const nomeFiltro = ref('')
 const siglaPartidoFiltro = ref('')
 const siglaUfFiltro = ref('')
+const sincronizando = ref(null)
 
 async function buscarDeputados() {
   try {
@@ -27,7 +28,18 @@ async function buscarDeputados() {
   }
 }
 
-onMounted(() => buscarDeputados())
+async function sincronizarDespesas(idDeputado) {
+  sincronizando.value = idDeputado
+  try {
+    await api.post(`/sincronizar-despesas/${idDeputado}`)
+    alert('Despesas sincronizadas com sucesso!')
+  } catch (error) {
+    alert('Erro ao sincronizar despesas.')
+    console.error(error)
+  } finally {
+    sincronizando.value = null
+  }
+}
 
 function aplicarFiltro() {
   pagina.value = 1
@@ -49,6 +61,9 @@ function aplicarFiltro() {
     <ul>
       <li v-for="dep in deputados" :key="dep.id">
         {{ dep.nome }} - {{ dep.sigla_partido }} / {{ dep.sigla_uf }}
+        <button @click="sincronizarDespesas(dep.id)" :disabled="sincronizando === dep.id">
+          {{ sincronizando === dep.id ? 'Sincronizando...' : 'Sincronizar Despesas' }}
+        </button>
       </li>
     </ul>
 
